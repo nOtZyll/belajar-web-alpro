@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and Table Display</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .file-upload {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+        }
+
+        td, th {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Upload JSON/CSV and View Table</h1>
+    <div class="file-upload">
+        <input type="file" id="fileInput" accept=".json, .csv">
+    </div>
+    <table id="dataTable" class="display" style="width:100%">
+        <thead id="tableHead">
+        </thead>
+        <tbody id="tableBody">
+        </tbody>
+    </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+
+<script>
+    // Function to parse the CSV file to a 2D array
+    function parseCSV(text) {
+        const rows = text.split("\n");
+        return rows.map(row => row.split(","));
+    }
+    
+    // Function to parse the JSON file
+    function parseJSON(text) {
+        return JSON.parse(text);
+    }
+
+    // Function to render the table
+    function renderTable(data) {
+        const tableHead = document.getElementById("tableHead");
+        const tableBody = document.getElementById("tableBody");
+
+        // Clear any previous table content
+        tableHead.innerHTML = "";
+        tableBody.innerHTML = "";
+
+        // Generate table headers
+        const headers = Object.keys(data[0]);
+        const headerRow = document.createElement("tr");
+        headers.forEach(header => {
+            const th = document.createElement("th");
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        tableHead.appendChild(headerRow);
+
+        // Generate table rows
+        data.forEach(row => {
+            const tr = document.createElement("tr");
+            headers.forEach(header => {
+                const td = document.createElement("td");
+                td.textContent = row[header];
+                tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+        });
+
+        // Initialize DataTable for sorting, searching, and pagination
+        $('#dataTable').DataTable({
+            destroy: true,  // Allow reinitialization of DataTable
+            pageLength: 5,  // Default rows to show
+            lengthMenu: [5, 10, 25, 50, 100]  // Options for numbers of rows per page
+        });
+    }
+
+    // File upload event handler
+    document.getElementById('fileInput').addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const text = e.target.result;
+
+                try {
+                    let data;
+                    if (file.name.endsWith(".csv")) {
+                        const csvRows = parseCSV(text);
+                        const headers = csvRows[0]; // First row contains headers
+                        data = csvRows.slice(1).map(row => {
+                            const obj = {};
+                            headers.forEach((header, index) => {
+                                obj[header.trim()] = row[index] ? row[index].trim() : "";  // Map CSV values to headers
+                            });
+                            return obj;
+                        });
+                    } else if (file.name.endsWith(".json")) {
+                        data = parseJSON(text);
+                    } else {
+                        throw new Error("Unsupported file format");
+                    }
+
+                    renderTable(data); // Render table with parsed data
+
+                } catch (error) {
+                    alert("Error in processing file: " + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+</script>
+
+</body>
+</html>
